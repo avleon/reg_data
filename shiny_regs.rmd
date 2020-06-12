@@ -27,9 +27,12 @@ library("fuzzyjoin")
 library("shinyWidgets")
 
 
+# Load data
 reg <- read.csv("registries.csv")
 
-# Group data and summarise
+#View(reg)
+
+# Group data and summarise to show accummulated number of registries
 reg <- group_by(reg, year, month, id, state_name) %>%
   summarise(Freq = sum(Freq)) %>%
   group_by(id, state_name) %>%
@@ -39,7 +42,7 @@ reg <- group_by(reg, year, month, id, state_name) %>%
   mutate(mon_year = format(reg_date, "%B-%Y"))%>%
   mutate(id = str_mxstate(id))
 
-#View(reg)
+
 
 choices_month <- format(seq.Date(from = as.Date("2019-05-01"), by = "month", 
                                  to = as.Date("2020-06-01")), "%B-%Y")
