@@ -1,0 +1,123 @@
+---
+title: "shiny_regs"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      fig.dim = c(6, 6), 
+                      dpi = 100, 
+                      out.width = '100%')
+```
+
+```{r}
+library("dplyr")
+library("mxmaps")
+library("geojsonio")
+library("jsonlite")
+library("shiny")
+library("leaflet")
+library("RColorBrewer")
+library("lubridate")
+library("zoo")
+library("stringi")
+library("tidyverse")
+library("janitor")
+library("fuzzyjoin")
+library("shinyWidgets")
+
+
+reg <- read.csv("registries.csv")
+
+# Group data and summarise
+reg <- group_by(reg, year, month, id, state_name) %>%
+  summarise(Freq = sum(Freq)) %>%
+  group_by(id, state_name) %>%
+  mutate(Freq = cumsum(Freq))%>%
+  filter(id %in% 1:32) %>%
+  mutate(reg_date = as.Date(paste0(year, "-", month, "-01"))) %>%
+  mutate(mon_year = format(reg_date, "%B-%Y"))%>%
+  mutate(id = str_mxstate(id))
+
+#View(reg)
+
+choices_month <- format(seq.Date(from = as.Date("2019-05-01"), by = "month", 
+                                 to = as.Date("2020-06-01")), "%B-%Y")
+
+
+# Convert the topoJSON to spatial object
+data(mxstate.topoJSON)
+tmpdir <- tempdir()
+# have to use RJSONIO or else the topojson isn't valid
+write(RJSONIO::toJSON(mxstate.topoJSON), file.path(tmpdir, "state.topojson"))
+# read the topojson file as an 'sf' object
+states <- topojson_read(file.path(tmpdir, "state.topojson"))
+# put state codes in a standard format
+states$id <- str_mxstate(states$id)
+
+
+
+
+# Shiny app - ui 
+# Define UI for application that displays registries across Mexico within a time range
+ui <- bootstrapPage(
+
+  # Application title
+  titlePanel("Registries"),
+
+  tags$style(type = "text/css", "html, body {width:100%;height:100%}"),
+  leafletOutput("map", width = "100%", height = "100%"),
+  absolutePanel(top = 10, right = 10,
+                sliderTextInput(inputId = "range", 
+                                label = "Fecha:", 
+                                choices = choices_month
+                )
+  )
+)
+
+# Shiny app - server
+server <- function(input, output, session) {
+
+
+  filteredData <- reactive({
+    print(input$range[1])
+    states <- left_join(states, subset(reg, mon_year == input$range[1]), 
+                        by = "id")
+    states
+
+  })
+
+  colorpal <- reactive({
+    colorFactor(palette = c("#E6FAD7", "#AED68F", "#8ABA64", "#619A34", "#406C1F", "#203E09"), reg$Freq)
+  })
+
+  output$map <- renderLeaflet({
+
+    states <- left_join(states, subset(reg, year == 2019), by = "id")
+    pal <- colorpal()
+    leaflet(states) %>% addTiles() %>%
+      setView(-102, 23.8, 5)%>% 
+      addLegend(position = "bottomright",
+                pal = pal, 
+                values = ~reg$Freq, 
+                title = "Number of<br/>registries per<br/>state") %>% 
+      addTiles()
+  })
+
+  observe({
+    pal <- colorpal()
+    leafletProxy("map", data = filteredData()) %>%
+      clearShapes() %>%
+      addPolygons(stroke = TRUE, weight = 1, color = "#000000",
+                  fillOpacity = 0.8, smoothFactor = 0.5,
+                  fillColor = ~pal(Freq), 
+                  popup = ~ sprintf("Estado: %s<br/>Registros: %s",
+                                    stri_trans_totitle(state_name), 
+                                    round(Freq, 1)))
+  })
+
+
+}
+shinyApp(ui, server)
+```
+
