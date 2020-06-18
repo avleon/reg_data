@@ -114,7 +114,7 @@ server <- function(input, output, session) {
       addPolygons(stroke = TRUE, weight = 1, color = "#000000",
                   fillOpacity = 0.8, smoothFactor = 0.5,
                   fillColor = ~pal(Freq), 
-                  popup = ~ sprintf("Estado: %s<br/>Registros: %s",
+                  popup = ~ sprintf("State: %s<br/>Number of registries: %s",
                                     stri_trans_totitle(state_name), 
                                     round(Freq, 1)))
   })
