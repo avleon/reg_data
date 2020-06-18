@@ -91,7 +91,7 @@ server <- function(input, output, session) {
   })
 
   colorpal <- reactive({
-    colorFactor(palette = c("#E6FAD7", "#AED68F", "#8ABA64", "#619A34", "#406C1F", "#203E09"), reg$Freq)
+    colorFactor(palette = c("#FAF5FA", "#F7ADDD", "#E787C5", "#E640AB", "#C71E8B", "#960A65"), reg$Freq)
   })
 
   output$map <- renderLeaflet({
@@ -100,10 +100,10 @@ server <- function(input, output, session) {
     pal <- colorpal()
     leaflet(states) %>% addTiles() %>%
       setView(-102, 23.8, 5)%>% 
-      addLegend(position = "bottomright",
-                pal = pal, 
-                values = ~reg$Freq, 
-                title = "Number of<br/>registries per<br/>state") %>% 
+    #  addLegend(position = "bottomright",
+     #           pal = pal, 
+      #          values = ~reg$Freq, 
+       #         title = "Number of<br/>registries per<br/>state") %>% 
       addTiles()
   })
 
